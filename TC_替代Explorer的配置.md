@@ -1,5 +1,5 @@
 # 配置autohotkey 脚本
-1. 用`AHK2EXE`编译`OpenTCSelected.ahk`为`OpenTCSelected.exe` （可自行编译，或下载编译好的版本）
+1. 用`AHK2EXE`编译`OpenTCSelected.ahk`为`OpenTCSelected.exe` （可自行编译，或下载编译好的版本 https://github.com/valuex/AutohotkeyScripts/releases/tag/V0.1）
 2. 将`OpenTCSelected.exe` 放入`TotalCMD64.exe` 或 `TotalCMD.exe`所在目录
 
 # 修改注册表
