@@ -5,7 +5,7 @@
 ; 3. for special folders, like Control, My Computer, it will be open use explorer.exe
 ; Author: Valuex
 ; 2023/9/24
-
+#Requires AutoHotkey >=2.0
 fpath:=""
 loop A_Args.Length
 {
@@ -14,6 +14,7 @@ loop A_Args.Length
 fpath:=Trim(fpath)  ; remove the last space
 SpecialFolder := RegExMatch(fpath, "::\{.*\}")  ; ::{26EE0668-A00A-44D7-9371-BEB064C98683}  control
 DiskDrive:=RegExMatch(fpath, '([A-Z]:)\"',&DrivePath) ; drive 
+; MsgBox fpath
 if (SpecialFolder)
     Run "explorer.exe " . fpath   ; for special folders, open it with default explorer
 else if (DiskDrive)
@@ -66,11 +67,11 @@ TC_Open(InputPath)
     else  ; input is file
     {
         SplitPath InputPath, , &dir
-        iAcTab:=IsFolderInActiveTab(AcTabPath,dir . "\",AcTabNum)
+        iAcTab:=IsFolderInActiveTab(AcTabPath,dir,AcTabNum)
         if(iAcTab)
             iTab:=iAcTab
         else
-            iTab:=IsFolderOpenInTabs(AcTabs,dir . "\")    
+            iTab:=IsFolderOpenInTabs(AcTabs,dir)    
         if(iTab)
         {
             xsTCCommand:=5001+iTab  ; in TotalCMD.inc, source tab id starts from 5001
