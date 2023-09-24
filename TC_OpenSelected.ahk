@@ -1,4 +1,11 @@
-; fpath:="D:\SoftX\AHK_Scripts_V2\WinSwitch\"
+; TC_Open
+; Open file or folder with Total Commander
+; 1. if a folder already open in one of TC's tabs, activate the corresponding tab; else, open a new tab
+; 2. if the input file's directory open in one of TC's tabs, activate the corresponding tab, select the input file; else, open a new tab and select the file 
+; 3. for special folders, like Control, My Computer, it will be open use explorer.exe
+; Author: Valuex
+; 2023/9/24
+
 fpath:=""
 loop A_Args.Length
 {
@@ -31,11 +38,18 @@ TC_Open(InputPath)
     ReOutput(TC_OpenTabsFile)
     ; get open tabs number in active panel
     AcTabs:=IniRead(TC_OpenTabsFile,"activetabs")
-    
+    AcTabNum:=IniRead(TC_OpenTabsFile,"activetabs","activetab")
+    AcTabKeyName:=String(AcTabNum) . "_path"
+    AcTabPath:=IniRead(TC_OpenTabsFile,"activetabs",AcTabKeyName)
+    ; MsgBox AcTabPath
     iTabExist:=false
     if(InPutType=1)  ; input is folder
     {
-        iTab:=IsFolderOpenInTabs(AcTabs,InputPath)  
+        iAcTab:=IsFolderInActiveTab(AcTabPath,InputPath,AcTabNum)
+        if(iAcTab)
+            iTab:=iAcTab
+        else
+            iTab:=IsFolderOpenInTabs(AcTabs,InputPath)  
    
         if(iTab)
         {
@@ -52,16 +66,30 @@ TC_Open(InputPath)
     else  ; input is file
     {
         SplitPath InputPath, , &dir
-        iTab:=IsFolderOpenInTabs(AcTabs,dir)        
+        iAcTab:=IsFolderInActiveTab(AcTabPath,dir . "\",AcTabNum)
+        if(iAcTab)
+            iTab:=iAcTab
+        else
+            iTab:=IsFolderOpenInTabs(AcTabs,dir . "\")    
         if(iTab)
         {
             xsTCCommand:=5001+iTab  ; in TotalCMD.inc, source tab id starts from 5001
-            SendMessage( 1075, xsTCCommand, 0, , "ahk_class TTOTAL_CMD")
-            Sleep(500)
-            SendMessage( 1075, 3007, 0, , "ahk_class TTOTAL_CMD")  ;cm_CloseCurrentTab=3007;Close tab  
+            SendMessage( 1075, xsTCCommand, 0, , "ahk_class TTOTAL_CMD") ; go to tab
+            GotoFile(InputPath)
         }
-        tc_cmd:=TC_Path . " /O /T /A /S /L= " . DoubleQuote(InputPath)
-        run tc_cmd
+        else
+        {
+            tc_cmd:=TC_Path . " /O /T /A /S /L= " . DoubleQuote(InputPath)
+            run tc_cmd
+        }
+    }
+
+    GotoFile(path)
+    {
+        user_cmd_ini:=A_ScriptDir . "\usercmd.ini"
+        SecName:="em_focusfile"
+        IniWrite(path,user_cmd_ini,SecName,"param")
+        SendTCUserCommand("em_focusfile")
     }
 
     AOR(WinTitle,WinExe)
@@ -71,7 +99,6 @@ TC_Open(InputPath)
             WinActivate(WinTitle)
             WinA:=WinWaitClass("TTOTAL_CMD")
             return WinA ? true: false
-
         }
         else
         {
@@ -141,6 +168,13 @@ TC_Open(InputPath)
             }
         }
         return false
+    }
+    IsFolderInActiveTab(ActiveTabPath,InputPath,AcTabNumber)
+    {
+        if(StrCompare(InputPath,ActiveTabPath)=0)
+            return AcTabNumber
+        else
+            return false
     }
     GetTabID(iniLine)
     {
