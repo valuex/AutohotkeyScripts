@@ -18,4 +18,9 @@
 button=wcmicons.dll,10
 cmd=SAVETABS2
 param="%|commander_path|\User\SAVETABS2.tab"
+[em_focusfile]
+button=wcmicons.dll,10
+cmd=CD
+param="D:\SoftX\TotalCommander11\TCMatch.ini"
+
 ```
