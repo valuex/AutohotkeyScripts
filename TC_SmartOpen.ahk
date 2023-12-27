@@ -1,4 +1,4 @@
-; TC_Open
+; TC_SmartOpen
 ; Open file or folder with Total Commander
 ; 1. if a folder already open in one of TC's tabs, activate the corresponding tab; else, open a new tab
 ; 2. if the input file's directory open in one of TC's tabs, activate the corresponding tab, select the input file; else, open a new tab and select the file 
