@@ -1,6 +1,6 @@
 
 GroupAdd "Browser", "ahk_exe chrome.exe"
-GroupAdd "Browser", "msedge chrome.exe"
+GroupAdd "Browser", "ahk_exe msedge.exe"
 
 #HotIf WinActive("ahk_group Browser")
 ^d::
