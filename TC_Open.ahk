@@ -6,6 +6,8 @@
 ; Author: Valuex
 ; 2023/9/24
 #Requires AutoHotkey >=2.0
+#Include .\lib\TC_AHK_Lib.ahk
+
 fpath:=""
 loop A_Args.Length
 {
@@ -14,7 +16,6 @@ loop A_Args.Length
 fpath:=Trim(fpath)  ; remove the last space
 SpecialFolder := RegExMatch(fpath, "::\{.*\}")  ; ::{26EE0668-A00A-44D7-9371-BEB064C98683}  control
 DiskDrive:=RegExMatch(fpath, '([A-Z]:)\"',&DrivePath) ; drive 
-; MsgBox fpath
 if (SpecialFolder)
     Run "explorer.exe " . fpath   ; for special folders, open it with default explorer
 else if (DiskDrive)
@@ -44,7 +45,6 @@ TC_Open(InputPath)
     AcTabNum:=IniRead(TC_OpenTabsFile,"activetabs","activetab")
     AcTabKeyName:=String(AcTabNum) . "_path"
     AcTabPath:=IniRead(TC_OpenTabsFile,"activetabs",AcTabKeyName)
-    ; MsgBox AcTabPath
     iTabExist:=false
     if(InPutType=1)  ; input is folder
     {
@@ -56,14 +56,12 @@ TC_Open(InputPath)
    
         if(iTab)
         {
-            xsTCCommand:=5000+iTab  ; in TotalCMD.inc, source tab id starts from 5001
-            SendMessage( 1075, xsTCCommand, 0, , "ahk_class TTOTAL_CMD")
+            xsTCCommand:=5200+iTab  ; in TotalCMD.inc, left tab id starts from 5201
+            SendMessage(1075, xsTCCommand, 0, , "ahk_class TTOTAL_CMD")
         }
         else
         {
-            ; run tc to open a new tab for input path
-            tc_cmd:=TC_Path . " /O /T /S /L= " . DoubleQuote(InputPath)
-            run tc_cmd
+            TC_LeftNewTab(InputPath)
         }
     }
     else  ; input is file
@@ -76,25 +74,15 @@ TC_Open(InputPath)
             iTab:=IsFolderOpenInTabs(AcTabs,dir)    
         if(iTab)
         {
-            xsTCCommand:=5001+iTab  ; in TotalCMD.inc, source tab id starts from 5001
-            SendMessage( 1075, xsTCCommand, 0, , "ahk_class TTOTAL_CMD") ; go to tab
-            GotoFile(InputPath)
+            xsTCCommand:=5201+iTab-1  ; in TotalCMD.inc, left tab id starts from 5201
+            SendMessage(1075, xsTCCommand, 0, , "ahk_class TTOTAL_CMD") ; go to tab
+            TC_OpenAndSelect(InputPath)
         }
         else
         {
-            tc_cmd:=TC_Path . " /O /T /A /S /L= " . DoubleQuote(InputPath)
-            run tc_cmd
+            TC_FocusOnLeftFile(InputPath)
         }
     }
-
-    GotoFile(path)
-    {
-        user_cmd_ini:=A_ScriptDir . "\usercmd.ini"
-        SecName:="em_focusfile"
-        IniWrite(path,user_cmd_ini,SecName,"param")
-        SendTCUserCommand("em_focusfile")
-    }
-
     AOR(WinTitle,WinExe)
     {
         if(WinExist(WinTitle))
@@ -153,6 +141,8 @@ TC_Open(InputPath)
     IsFolderOpenInTabs(ActiveTabs,InputPath)
     {
         ; loop to see if there is any tab already exist
+        if(!SubStr(InputPath,StrLen(InputPath)="\"))
+            InputPath:=InputPath . "\"
         ArrAcTabs:=StrSplit(ActiveTabs,"`n","`r")
         AcTabsNum:=ArrAcTabs.Length-1
         loop AcTabsNum
@@ -198,7 +188,8 @@ TC_Open(InputPath)
             FileDelete TC_OpenTabsFile
     
         ; output open tab list
-        SendTCUserCommand("em_savealltabs")
+        TC_SendUserCommand("em_savealltabs")
+        
         loop 10
         {
             Sleep(200)
@@ -211,19 +202,3 @@ TC_Open(InputPath)
         return Chr(34) . strInput . Chr(34)
     }
 }
-
-SendTCUserCommand(userCommand) 
-{
-    ; https://www.autohotkey.com/boards/viewtopic.php?p=538463&sid=4471e03917209854441ac07ebdc70901#p538463
-    static EM := 19781
-    static WM_COPYDATA := 0x4A
-    ansiBuf := Buffer(StrPut(userCommand, 'CP0'))
-    StrPut(userCommand, ansiBuf, 'CP0')
-    COPYDATASTRUCT := Buffer(A_PtrSize * 3)
-    NumPut('Ptr', EM, 'Ptr', ansiBuf.size, 'Ptr', ansiBuf.ptr, COPYDATASTRUCT)
-    MsgResult:=SendMessage( WM_COPYDATA,, COPYDATASTRUCT,, 'ahk_class TTOTAL_CMD')
-    return MsgResult
-}
-
-
-
