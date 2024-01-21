@@ -1,6 +1,6 @@
 #Requires Autohotkey >=2.0
-#Include  D:\SoftX\TC_SnippetManager\TC_SnippetManager\lib\Ini_File_Lib.ahk
-#Include C:\Users\wei_x\Desktop\Chrome_Download\lib\TC_AHK_Lib.ahk
+#Include  .\lib\Ini_File_Lib.ahk
+#Include .\lib\TC_AHK_Lib.ahk
 global g_TCDir:="D:\SoftX\TotalCommander11\"
 global g_tc_CmdFile:=g_TCDir . "TotalCMD.inc"
 global g_CMDGroups
