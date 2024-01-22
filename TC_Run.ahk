@@ -1,6 +1,7 @@
 #Requires Autohotkey >=2.0
 #Include  .\lib\Ini_File_Lib.ahk
 #Include .\lib\TC_AHK_Lib.ahk
+
 global g_TCDir:="D:\SoftX\TotalCommander11\"
 global g_tc_CmdFile:=g_TCDir . "TotalCMD.inc"
 global g_CMDGroups
@@ -28,13 +29,16 @@ OnMessage(WM_KEYDOWN := 0x100, KeyDown)
         FileDelete("log.txt")
     Add2List()
     ; LV.ModifyCol ; Auto-size each column to fit its contents.
+    LVColumnWidth()
+    MyGui.Show()    
+}
+LVColumnWidth()
+{
     LV.ModifyCol(1,"80")
     LV.ModifyCol(2,"200")
     LV.ModifyCol(3,"300")
     LV.ModifyCol(4,"150")
-    MyGui.Show()    
 }
-
 ; excute corrsponding command
 LVItemHanlder(LV,RowNum)
 {
@@ -57,6 +61,11 @@ LVItemHanlder(LV,RowNum)
             PostMessage(0x433,CMDCode,0,,"ahk_class TTOTAL_CMD")
         catch TimeoutError as err
             ToolTip "Time out"
+    }
+    else
+    {
+        ToolTip "Can NOT excute CMD with negative code now!"
+        SetTimer () => ToolTip(), -3000
     }
     WinClose()
 }
@@ -121,7 +130,9 @@ UserInput_Change(*)
     InputStr:=CtlInput.Value
     FoundPos1 := RegExMatch(InputStr, "^\/(\w*?)\s(\w*)" , &OutputVar)
     FoundPos2 := RegExMatch(Trim(InputStr), "^\/(\w+?)$" , &InGroupNamePat)
+    FoundPos3 := RegExMatch(Trim(InputStr), "^;([0-9]+|-[0-9]+)$" , &InCMDCodePat)
     IsIndexByGroup:=FoundPos2=1
+    IsIndexByCode:=FoundPos3=1
     InputStrLastChar:=SubStr(InputStr,StrLen(InputStr))
     IsAutoExpandToFirstGroup:=IsIndexByGroup and InputStrLastChar=" "
     SpacePos:=InStr(InputStr," ")
@@ -133,13 +144,15 @@ UserInput_Change(*)
         LV.Delete
         loop g_CMDGroups.Length
             LV.Add(,g_CMDGroups[A_Index],"","","") 
-        AutoExpandedGroup:=""    
+        AutoExpandedGroup:=""
+        LV.ModifyCol    
     }
-    else if(InputStr="")  ; if delete input to nothing
+    else if(InputStr="" or InputStr=";")  ; input nothing or only input semicolon for code indexing
     {
         LV.Delete
         Add2List()
-        AutoExpandedGroup:=""  
+        AutoExpandedGroup:=""
+        LVColumnWidth()  
     }
     else if(IsIndexByGroup)  ; indexing group by "/xxx"
     {
@@ -163,14 +176,15 @@ UserInput_Change(*)
             LV.Delete
             For CMDName , CMDInfo in g_TC_CMDArr
             {
-                ; mm CMDName 
                 ThisItem:=g_TC_CMDArr[CMDName]
                 if(ThisItem["Group"]=Row1Text)
                 {
                     LV.Add(,ThisItem["Code"],CMDName,ThisItem["Comment"],ThisItem["Group"])  
                 }
-            }         
+            } 
+            LVColumnWidth()       
         }
+        
     }
     else if(AutoExpandedGroup)  ;indexing command by "/xxx<space>xxx"
     {
@@ -196,6 +210,32 @@ UserInput_Change(*)
         }
         SortAndAddToLV(AllMatchedItems)
     }
+    else if(IsIndexByCode)
+    {
+        InputCode:=InCMDCodePat[1]
+        LV.Delete
+        AllMatchedItems:=""
+        For CMDName , CMDInfo in g_TC_CMDArr
+        {
+            ThisItem:=g_TC_CMDArr[CMDName]
+            CMDCode:=ThisItem["Code"]
+            FoundPos := RegExMatch(CMDCode, InputCode)
+            if(FoundPos=0)
+                continue
+            if(CMDCode>0)
+            {   
+                ThisMatchedItem:=FoundPos  . CMDCode . "|" . CMDName
+                AllMatchedItems:=AllMatchedItems . ThisMatchedItem . "`n"
+            }
+            else
+            {
+                ; for command with minus code, increase weight to make it appear at the back of the list
+                ThisMatchedItem:=(FoundPos+1)*10000 . Abs(CMDCode) . "|" . CMDName  
+                AllMatchedItems:=AllMatchedItems . ThisMatchedItem . "`n"
+            } 
+        }
+        SortAndAddToLV(AllMatchedItems) 
+    }
     else  ; indexing command name and description
     {
         InRegNeedle:=Str2RegChars(InputStr)
@@ -220,8 +260,7 @@ UserInput_Change(*)
         }
         SortAndAddToLV(AllMatchedItems)          
     }
-    LV.ModifyCol ; Auto-size each column to fit its contents.
-
+    ; LV.ModifyCol ; Auto-size each column to fit its contents.
 
     ; regmatchx to get matched results including matched content, position and score.
     RegMatchX(Haystack,NeedleRegEx,&OutputVar,StartingPos:=1, &FoundPos:=0,&MatchScore:=0)
@@ -299,7 +338,8 @@ UserInput_Change(*)
             ThisItem:=g_TC_CMDArr[CMDName]
             LV.Add(,ThisItem["Code"],CMDName,ThisItem["Comment"],ThisItem["Group"])
             CMDsAdded[CMDName]:=Map("Group", ThisItem["Group"],"Code",ThisItem["Code"],"Comment",ThisItem["Comment"])
-        } 
+        }
+        LVColumnWidth() 
         return CMDsAdded
     }
 
@@ -321,9 +361,11 @@ GetCMDArr(&CMDGroups)
     CMDGroups:=Array()
     loop  ArrCMDContent.Length
     {
-        ThisLine:=ArrCMDContent[A_Index]
-        CMDGroupPos := RegExMatch(ThisLine, "(.*?)=0" , &ThisCMDGroupPat,1)
-        IsCMDLine:=InStr(ThisLine, "cm_")
+        ThisLine:=Trim(ArrCMDContent[A_Index])
+        ThisLineLen:=StrLen(ThisLine)
+        CMDGroupPos := RegExMatch(ThisLine, "^\[(.*?)=0" , &ThisCMDGroupPat,1)
+        ; IsCMDLine:=InStr(ThisLine, "cm_")
+        IsCMDLine:=(ThisLineLen>1) and CMDGroupPos=0 and (not SubStr(ThisLine,1,1)=";")
         ;cm_SrcViewModeList=333;Source: View mode menu
         if(CMDGroupPos>=1)
         {
@@ -333,12 +375,17 @@ GetCMDArr(&CMDGroups)
         }
         else if(IsCMDLine)
         {
+
             EqualPos:=InStr(ThisLine,"=")
             SemiPos:=InStr(ThisLine,";")
-            CMDName := Trim(SubStr(ThisLine,4,EqualPos-4))
+            CMDName := Trim(SubStr(ThisLine,1,EqualPos-1))
             CMDCode := Trim(SubStr(ThisLine,EqualPos+1,SemiPos-EqualPos-1))
             ; MsgBox CMDCode
             CMDComment := Trim(SubStr(ThisLine,SemiPos+1))
+            if(SubStr(ThisLine,1,3)="cm_")
+            {
+                CMDName := Trim(SubStr(ThisLine,4,EqualPos-4))
+            }
             try
             {
                 ArrCMDs[CMDName]:=Map("Group", ThisGroup,"Code",CMDCode,"Comment",CMDComment)
