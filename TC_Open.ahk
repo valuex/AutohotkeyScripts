@@ -4,9 +4,9 @@
 ; 2. if the input file's directory open in one of TC's tabs, activate the corresponding tab, select the input file; else, open a new tab and select the file 
 ; 3. for special folders, like Control, My Computer, it will be open use explorer.exe
 ; Author: Valuex
-; 2023/9/24
+; 2024/2/3
 #Requires AutoHotkey >=2.0
-#Include .\lib\TC_AHK_Lib.ahk
+#Include C:\Users\wei_x\Desktop\Chrome_Download\lib\TC_AHK_Lib.ahk
 
 fpath:=""
 loop A_Args.Length
@@ -202,3 +202,6 @@ TC_Open(InputPath)
         return Chr(34) . strInput . Chr(34)
     }
 }
+
+
+
