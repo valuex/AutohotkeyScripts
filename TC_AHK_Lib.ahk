@@ -1,14 +1,14 @@
 
 /*
-TF_Minimum_Mode() 
+TC_Minimum_Mode() 
 fucntion: hide TC's title bar, menu bar, button bar, etc
 agruments: path of WinCMD.ini
 return: none
 */
 
-TF_Minimum_Mode()
+TF_Minimum_Mode(WinCMD_ini)
 {
-    global WinCMD_ini
+    ; global WinCMD_ini
     ; 1-toggle caption
     ; https://learn.microsoft.com/en-us/windows/win32/winmsg/window-styles
     ; 0x00C00000 WS_CAPTION
@@ -60,7 +60,7 @@ TF_Minimum_Mode()
     }
 }
 
-TF_Toggle_Mode()
+TF_Toggle_Mode(WinCMD_ini)
 {
     ; 1-toggle caption
     Style := WinGetStyle("ahk_class TTOTAL_CMD")
@@ -83,7 +83,7 @@ TF_Toggle_Mode()
     cmd=OPENLANGUAGEFILE 
     param="%|commander_path|\Language\Wcmd_chn.mnu"
     */
-    global WinCMD_ini
+    ; global WinCMD_ini
     ; WinCMD_ini:="D:\SoftX\TotalCommander11\WinCMD.ini"
     menuName:=IniRead(WinCMD_ini,"Configuration","Mainmenu")
     if(InStr(menuName,"Wcmd_chn"))
@@ -99,6 +99,46 @@ TF_Toggle_Mode()
     SendMessage(1075, 2944, 0, , "ahk_class TTOTAL_CMD") ;cm_VisButtonBar2=2944;Show/hide vertical button bar
 }
 
+TF_Goto1stDownload(FilePath)
+{
+    global g_TCClass:="ahk_class TTOTAL_CMD"
+    global g_TCEXE:="D:\SoftX\TotalCommander11\TotalCMD64.exe"
+    TC_AOR(g_TCClass,g_TCEXE)
+    TC_FocusOnLeftFile(FilePath)
+    ; SendMessage(0x433,4001,0,,"ahk_class TTOTAL_CMD") ; cm_FocusLeft=4001;Focus on left file list
+    ; SendMessage(0x433,124,-1,,"ahk_class TTOTAL_CMD") ; cm_LeftByDateTime=124;Left: Sort by date
+    ; SendMessage(0x433,2050,0,,"ahk_class TTOTAL_CMD") ; cm_GoToFirstFile=2050;Place cursor on first file in list
+}
+
+TC_AOR(WinTitle,WinExe)
+{
+    if(WinExist(WinTitle))
+    {
+        WinActivate(WinTitle)
+        WinA:=WinWaitClass("TTOTAL_CMD")
+        return WinA ? true: false
+    }
+    else
+    {
+        Run WinExe
+        WinWaitActive(WinTitle,,5)
+        WinA:=WinWaitClass("TTOTAL_CMD")
+        return WinA ? true: false
+    }
+    WinWaitClass(WinClass)
+    {
+        loop(100)
+        {
+            aClass:=WinGetClass("A")
+            if(StrCompare(aClass,WinClass)=0)
+                return true
+            else
+                Sleep(100)
+        }
+        return false
+    }
+}
+
 TC_FocusOnLeftFile(FileFullPath)
 {
     SplitPath FileFullPath,,&DirPath
@@ -106,7 +146,7 @@ TC_FocusOnLeftFile(FileFullPath)
     AcSide:=TC_GetActiveSide1()
     If(AcSide:=2)
         SendMessage(0x433,4001,0,,"ahk_class TTOTAL_CMD") ;cm_FocusLeft=4001;Focus on left file list
-    TC_OpenAndSelect(FileFullPath)
+    TC_FocusLeftFile(FileFullPath) 
     WinActivate("ahk_class TTOTAL_CMD")
 }
 TC_FocusOnRightFile(FileFullPath)
@@ -133,6 +173,17 @@ The complete syntax is in fact :
 <Source>`r<Target>\0S                   ; eg:  D:\xxx\   `r  E:\xxx\  \0
 <Left>`r<Right>\0T open in new Tab      ; eg:  D:\xxx\   `r  E:\xxx\  \0T
 */
+TC_FocusLeftFile(FilePath) 
+{
+    newPath:=FilePath . "\:`r"
+    TC_SetPath(newPath) 
+}
+TC_FocusRightFile(FilePath) 
+{
+    newPath:="`r" . FilePath . "\:\0"
+    TC_SetPath(newPath) 
+}
+
 TC_SetLeftPath(DirPath) 
 {
     ; DirPath should be ended with \
@@ -206,19 +257,11 @@ return: none
 
 TC_OpenAndSelect(FilePath)
 {
-    SavedClip:=ClipboardAll()
-    A_Clipboard:=""
-    A_Clipboard:=Trim(FilePath)
-    Sleep 300
-    Critical
-    ;0x433=1075=WM_USER+51
-    SendMessage(0x433,2033,0,,"ahk_class TTOTAL_CMD")   ; cm_LoadSelectionFromClip=2033;Read file selection from clipboard
-    ToolTip A_Clipboard . "-1"
-    SendMessage(0x433,2049,0,,"ahk_class TTOTAL_CMD")   ; cm_GoToFirstEntry=2049;Place cursor on first folder or file
-    SendMessage(0x433,2053,0,,"ahk_class TTOTAL_CMD")   ; cm_GoToNextSelected=2053;Go to next selected file
-    SendMessage(0x433,524,0,,"ahk_class TTOTAL_CMD")    ; cm_ClearAll=524;Unselect all (files+folders)
-    A_Clipboard:=SavedClip
-    SavedClip:=""
+    AcSide:=TC_GetActiveSide1()
+    If(AcSide=1)
+        TC_FocusLeftFile(FilePath)
+    else
+        TC_FocusRightFile(FilePath)
 }
 
 /*
