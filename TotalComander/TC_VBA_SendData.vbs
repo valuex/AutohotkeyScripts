@@ -1,5 +1,3 @@
-' send WM_COPYDATA to TC_VBA_Interposer.ahk
-
 Option Explicit
 
 Private Declare PtrSafe Function FindWindow Lib "USER32" Alias "FindWindowA" (ByVal lpClassName As String, ByVal lpWindowName As String) As Long
@@ -28,22 +26,30 @@ Function GetHiddenWinHwndByTitle(strWinTitle) As Long
 End Function
 
 
-Sub TC_SendUserCMD()
+Sub TC_SendUserCMD(strPath)
     Dim UserCMD As String
-    UserCMD = "em_focusfile"
+    Dim AcWorkbookName As String
+    AcWorkbookName = ActiveWorkbook.Name
+    
+    UserCMD = "em_SelectFile " & strPath & "|" & AcWorkbookName
     
     Dim cds As CopyDataStruct, result As LongPtr
-    Dim hwndAHKInterposer As Long
+    Static hwndAHKInterposer As Long
     Dim wParam As Long
     wParam = 0
-    hwndAHKInterposer = GetHiddenWinHwndByTitle("TC-VBA-Interposer")
+    If (hwndAHKInterposer > 0) Then
+        hwndAHKInterposer = hwndAHKInterposer
+    Else
+        hwndAHKInterposer = GetHiddenWinHwndByTitle("TC-VBA-Interposer")
+        Debug.Print 1
+    End If
     'Debug.Print hwndAHKInterposer
     If (hwndAHKInterposer > 0) Then
         cds.dwData = Asc("E") + 256 * Asc("M")
         cds.cbData = Len(UserCMD) * 2 + 2  'The size, in bytes
         cds.lpData = StrPtr(UserCMD)
         result = SendMessage(hwndAHKInterposer, WM_COPYDATA, wParam, cds)
-        Debug.Print hwndAHKInterposer
+        'Debug.Print hwndAHKInterposer
     End If
 End Sub
 
@@ -66,26 +72,6 @@ Private Function GetHandleFromPartialCaption(ByRef lWnd As Long, ByVal sCaption 
             Exit Do
         End If
         lhWndP = GetWindow(lhWndP, GW_HWNDNEXT)
-    Loop
-End Function
-
-Function WndFromPID(ByVal Xpid As LongPtr) As LongPtr
-    'https://stackoverflow.com/questions/7807150/how-can-i-get-a-handle-to-a-window-of-executed-process-in-vba
-    Dim Nhwnd As LongPtr, Npid As Long, Nthread_id As Long
-    ' Get the first window handle.
-    Nhwnd = FindWindow(vbNullString, vbNullString)  ' NOT (ByVal 0&, ByVal 0& ) !
-    ' Loop until we find the target or we run out of windows
-    Do While Nhwnd <> 0
-        ' See if this window has a parent. If not, it is a top-level window
-        If GetParent(Nhwnd) = 0 Then
-            ' This is a top-level window. See if it has the target instance handle
-            Nthread_id = GetWindowThreadProcessId(Nhwnd, Npid)
-            If Npid = Xpid Then
-                WndFromPID = Nhwnd      ' This is the target
-                Exit Do
-            End If
-        End If
-        Nhwnd = GetWindow(Nhwnd, 2)     ' Examine the next window [2 = GW_HWNDNEXT]
     Loop
 End Function
 
